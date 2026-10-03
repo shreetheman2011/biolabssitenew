@@ -66,6 +66,10 @@ export function AttemptRunner({
     });
   }
 
+  function handleJournalResponseChange(promptId: string, value: JournalResponses["answers"][string]) {
+    setJournalResponses((prev) => ({ ...prev, answers: { ...prev.answers, [promptId]: value } }));
+  }
+
   const requiredPromptsAnswered = journalSchema.prompts
     .filter((p) => p.required)
     .every((p) => {
@@ -90,7 +94,13 @@ export function AttemptRunner({
       submitError={submitError}
       onSubmit={handleSubmit}
     >
-      <LabComponent simState={simState} onSimStateChange={setSimState} readOnly={readOnly} />
+      <LabComponent
+        simState={simState}
+        onSimStateChange={setSimState}
+        readOnly={readOnly}
+        journalResponses={journalResponses}
+        onJournalResponseChange={handleJournalResponseChange}
+      />
       <JournalPromptRenderer
         schema={journalSchema}
         responses={journalResponses}

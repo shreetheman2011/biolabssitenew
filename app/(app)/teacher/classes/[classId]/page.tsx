@@ -135,7 +135,7 @@ export default async function ClassDetailPage({
           <div className="flex items-center justify-between gap-2">
             <div>
               <CardTitle>Assignments</CardTitle>
-              <CardDescription>Post one of the four labs to this class.</CardDescription>
+              <CardDescription>Post one of the labs to this class.</CardDescription>
             </div>
             <Button asChild size="sm">
               <Link href={`/teacher/classes/${classId}/assignments/new`}>
@@ -158,7 +158,7 @@ export default async function ClassDetailPage({
                   <TableHead>Status</TableHead>
                   <TableHead>Grading</TableHead>
                   <TableHead className="text-right">Due</TableHead>
-                  <TableHead className="w-28" />
+                  <TableHead className="w-40" />
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -185,15 +185,23 @@ export default async function ClassDetailPage({
                         {a.due_at ? new Date(a.due_at).toLocaleDateString() : "No due date"}
                       </TableCell>
                       <TableCell>
-                        {a.status === "posted" && (
+                        <div className="flex items-center justify-end gap-3">
                           <Link
-                            href={`/teacher/classes/${classId}/assignments/${a.id}/gradebook`}
+                            href={`/teacher/classes/${classId}/assignments/${a.id}/edit`}
                             className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-xs font-medium"
                           >
-                            Gradebook
-                            <ChevronRight className="size-3.5" />
+                            Edit
                           </Link>
-                        )}
+                          {a.status === "posted" && (
+                            <Link
+                              href={`/teacher/classes/${classId}/assignments/${a.id}/gradebook`}
+                              className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-xs font-medium"
+                            >
+                              Gradebook
+                              <ChevronRight className="size-3.5" />
+                            </Link>
+                          )}
+                        </div>
                       </TableCell>
                     </TableRow>
                   );

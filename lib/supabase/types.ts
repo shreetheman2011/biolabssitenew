@@ -220,6 +220,9 @@ export interface Database {
           graded_at: string | null;
           notified_at: string | null;
         };
+        // Note: grade_id/graded_submission_id/numeric_score/rubric_scores/feedback/graded_at/
+        // notified_at reflect only the latest attempt's grade (grades are now per-submission,
+        // see 0016_grades_per_attempt.sql), not a rollup across all of a student's attempts.
         Relationships: [];
       };
     };

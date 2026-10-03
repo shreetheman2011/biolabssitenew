@@ -55,15 +55,16 @@ export default async function StudentClassDetailPage({
         .in("assignment_id", assignmentIds)
     : { data: [] };
 
-  const { data: grades } = assignmentIds.length
+  const submissionIds = (submissions ?? []).map((s) => s.id);
+
+  const { data: grades } = submissionIds.length
     ? await supabase
         .from("grades")
-        .select("assignment_id, numeric_score, rubric_scores")
-        .eq("student_id", studentId)
-        .in("assignment_id", assignmentIds)
+        .select("submission_id, numeric_score, rubric_scores")
+        .in("submission_id", submissionIds)
     : { data: [] };
 
-  const gradeByAssignmentId = new Map((grades ?? []).map((g) => [g.assignment_id, g]));
+  const gradeBySubmissionId = new Map((grades ?? []).map((g) => [g.submission_id, g]));
 
   return (
     <div className="flex flex-col gap-6">
@@ -87,8 +88,8 @@ export default async function StudentClassDetailPage({
                 const slug = labSlugById.get(a.lab_template_id);
                 const Icon = slug ? LAB_ICONS[slug] : null;
                 const subs = (submissions ?? []).filter((s) => s.assignment_id === a.id);
-                const { inProgress, submittedCount } = summarizeAttempts(subs);
-                const grade = gradeByAssignmentId.get(a.id);
+                const { inProgress, submittedCount, latestSubmitted } = summarizeAttempts(subs);
+                const grade = latestSubmitted ? gradeBySubmissionId.get(latestSubmitted.id) : undefined;
                 const canStart = canStartNewAttempt({
                   hasInProgress: !!inProgress,
                   submittedCount,
@@ -153,11 +154,12 @@ export default async function StudentClassDetailPage({
                       {!grade && overdue && (
                         <Badge variant="destructive">Overdue</Badge>
                       )}
-                      {grade ? (
+                      {grade && (
                         <Link href="/student/grades" className="text-muted-foreground text-xs hover:text-foreground">
                           View feedback
                         </Link>
-                      ) : inProgress ? (
+                      )}
+                      {inProgress ? (
                         <LabActionButton assignmentId={a.id} label="Resume" />
                       ) : canStart ? (
                         <LabActionButton

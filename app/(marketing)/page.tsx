@@ -215,7 +215,7 @@ export default function MarketingHomePage() {
           </h2>
           <p className="text-muted-foreground max-w-md">
             Make an account, make a class, and your students can join with a code before the
-            period's over.
+            period&apos;s over.
           </p>
           <Button asChild size="lg" className="w-fit">
             <Link href="/signup?role=teacher">

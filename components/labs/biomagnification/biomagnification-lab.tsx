@@ -1,19 +1,10 @@
 "use client";
 
 import { DndContext, PointerSensor, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
-import { ArrowRight } from "lucide-react";
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
+import { ArrowRight, FlaskConical, Pipette } from "lucide-react";
+import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import { Slider } from "@/components/ui/slider";
+import { LedgerTag } from "@/components/ui/ledger-tag";
 import {
   Table,
   TableBody,
@@ -22,8 +13,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { FoodChainSlot } from "./food-chain-slot";
+import { DoseCylinder, TransferSyringe } from "./dose-control";
 import { OrganismCard } from "./organism-card";
+import { ShelfRack } from "./shelf-rack";
+import { SpecimenJar } from "./specimen-jar";
 import {
   DEFAULT_PRODUCER_CONCENTRATION,
   DEFAULT_RATIOS,
@@ -45,13 +38,14 @@ function defaultChain(): Record<TrophicLevel, string | null> {
   return { producer: null, primary: null, secondary: null, tertiary: null };
 }
 
-const RATIO_LABELS = [
-  "Producer → primary consumer",
-  "Primary → secondary consumer",
-  "Secondary → tertiary consumer",
+const RATIO_LABELS = ["Producer to primary", "Primary to secondary", "Secondary to tertiary"];
+const RATIO_DESCRIPTIONS = [
+  "How many times more concentrated the pollutant gets when a primary consumer eats a large volume of producers.",
+  "How many times more concentrated the pollutant gets when a secondary consumer eats several primary consumers.",
+  "How many times more concentrated the pollutant gets when a tertiary consumer eats several secondary consumers.",
 ];
 
-export function BiomagnificationLab({ simState, onSimStateChange, readOnly }: LabComponentProps) {
+export function BiomagnificationLab({ simState, onSimStateChange, readOnly, gradingView }: LabComponentProps) {
   const state = simState as Partial<BiomagnificationSimState>;
   const chain = state.chain ?? defaultChain();
   const producerConcentration = state.producerConcentration ?? DEFAULT_PRODUCER_CONCENTRATION;
@@ -60,7 +54,7 @@ export function BiomagnificationLab({ simState, onSimStateChange, readOnly }: La
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
   function patch(next: Partial<BiomagnificationSimState>) {
-    onSimStateChange({ chain, producerConcentration, ratios, ...next });
+    onSimStateChange?.({ chain, producerConcentration, ratios, ...next });
   }
 
   function handleDragEnd(event: DragEndEvent) {
@@ -88,20 +82,39 @@ export function BiomagnificationLab({ simState, onSimStateChange, readOnly }: La
     : [];
 
   return (
-    <div className="flex flex-col gap-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Build the food chain</CardTitle>
-          <CardDescription>
-            Drag each organism into the trophic level it belongs to, from producer up to a top predator.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-4 pb-6">
+    <div className="flex flex-col gap-5">
+      <Card className="overflow-hidden border-foreground/15 bg-[linear-gradient(180deg,var(--muted)_0%,var(--background)_60%)] py-0">
+        <div className="flex items-center justify-between gap-3 border-b border-border/70 px-5 py-2.5">
+          <div className="flex items-center gap-2">
+            <LedgerTag>Bench 4</LedgerTag>
+            <span className="text-muted-foreground font-mono text-xs">
+              {!chainComplete ? "Assembling food chain" : "Specimens dosed and shelved"}
+            </span>
+          </div>
+          <span className="flex items-center gap-1.5 font-mono text-xs text-muted-foreground">
+            <FlaskConical className="size-3.5" />
+            specimen shelf
+          </span>
+        </div>
+
+        <CardContent className="px-5 py-5">
+          <div className="mb-4 flex flex-col gap-1.5">
+            <p className="text-sm">
+              A pollutant that the body can&apos;t break down or flush out, like many pesticides and heavy metals,
+              enters this food chain at the producer level in a low dose. Nothing new is ever added after that first
+              jar. But every animal that eats a dosed organism keeps that dose, and every predator that eats several
+              of those animals inherits all of their stored doses at once. That is why the concentration climbs at
+              every step up the chain.
+            </p>
+            <p className="text-muted-foreground text-sm">
+              Drag each organism onto the jar for its trophic level below, from producer up to a top predator.
+            </p>
+          </div>
           <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
-            <div className="flex items-stretch gap-2 overflow-x-auto">
+            <div className="flex items-end justify-around gap-1 overflow-x-auto pb-1">
               {TROPHIC_LEVELS.map((level, i) => (
-                <div key={level} className="flex items-center gap-2">
-                  <FoodChainSlot
+                <div key={level} className="flex items-end gap-1">
+                  <SpecimenJar
                     level={level}
                     organism={ORGANISMS.find((o) => o.id === chain[level]) ?? null}
                     concentration={concentrations ? concentrations[i] : null}
@@ -109,16 +122,15 @@ export function BiomagnificationLab({ simState, onSimStateChange, readOnly }: La
                     onRemove={() => patch({ chain: { ...chain, [level]: null } })}
                   />
                   {i < TROPHIC_LEVELS.length - 1 && (
-                    <ArrowRight className="text-muted-foreground size-5 shrink-0" />
+                    <ArrowRight className="text-muted-foreground mb-10 size-4 shrink-0" />
                   )}
                 </div>
               ))}
             </div>
+            <ShelfRack />
             {pool.length > 0 && (
-              <div className="flex flex-col gap-2">
-                <p className="text-muted-foreground text-xs font-medium">
-                  Available organisms
-                </p>
+              <div className="mt-5 flex flex-col gap-2">
+                <p className="text-muted-foreground text-xs font-medium">Available specimens</p>
                 <div className="flex flex-wrap gap-2">
                   {pool.map((organism) => (
                     <OrganismCard key={organism.id} organism={organism} disabled={readOnly} />
@@ -130,60 +142,75 @@ export function BiomagnificationLab({ simState, onSimStateChange, readOnly }: La
         </CardContent>
       </Card>
 
-      {chainComplete && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Set the pollutant math</CardTitle>
+      {chainComplete && concentrations && (
+        <Card className="gap-4 py-5">
+          <CardHeader className="gap-1 px-5">
+            <CardTitle className="flex items-center gap-1.5 text-base">
+              <Pipette className="size-4" />
+              Dosing station
+            </CardTitle>
             <CardDescription>
-              Choose how much pollutant starts at the producer level, and how much it multiplies at each step up
-              the chain.
+              Draw up the starting dose at the producer level, then set how much the pollutant concentrates at each
+              transfer up the chain. The concentration never gets diluted back down, it only ever multiplies.
             </CardDescription>
           </CardHeader>
-          <CardContent className="flex flex-col gap-5 pb-6">
-            <div className="flex flex-col gap-2">
-              <div className="flex items-center justify-between">
-                <Label>Pollutant concentration at producer level</Label>
-                <span className="text-muted-foreground text-xs">{producerConcentration.toFixed(1)} ppm</span>
-              </div>
-              <Slider
-                value={[producerConcentration]}
+          <CardContent className="flex flex-col gap-5 px-5 pb-5">
+            <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:gap-8">
+              <DoseCylinder
+                label="Producer dose"
+                description="The pollutant concentration present in the producer organisms when the chain starts, in parts per million."
+                value={producerConcentration}
                 min={0.1}
                 max={5}
                 step={0.1}
                 disabled={readOnly}
-                onValueChange={([v]) => patch({ producerConcentration: v })}
+                onChange={(v) => patch({ producerConcentration: v })}
               />
-            </div>
-            {ratios.map((ratio, i) => (
-              <div key={i} className="flex flex-col gap-2">
-                <div className="flex items-center justify-between">
-                  <Label>{RATIO_LABELS[i]} multiplier</Label>
-                  <span className="text-muted-foreground text-xs">{ratio.toFixed(1)}x</span>
-                </div>
-                <Slider
-                  value={[ratio]}
-                  min={1}
-                  max={10}
-                  step={0.5}
-                  disabled={readOnly}
-                  onValueChange={([v]) => {
-                    const next = [...ratios] as [number, number, number];
-                    next[i] = v;
-                    patch({ ratios: next });
-                  }}
-                />
+              <div className="flex flex-1 flex-col gap-5">
+                {ratios.map((ratio, i) => (
+                  <TransferSyringe
+                    key={i}
+                    label={RATIO_LABELS[i]}
+                    description={RATIO_DESCRIPTIONS[i]}
+                    value={ratio}
+                    min={1}
+                    max={10}
+                    step={0.5}
+                    disabled={readOnly}
+                    onChange={(v) => {
+                      const next = [...ratios] as [number, number, number];
+                      next[i] = v;
+                      patch({ ratios: next });
+                    }}
+                  />
+                ))}
               </div>
-            ))}
+            </div>
+            <div className="flex flex-wrap items-center gap-x-1.5 gap-y-2 rounded-md border border-dashed border-border bg-muted/30 px-3 py-2 font-mono text-xs">
+              <span className="text-muted-foreground">the math:</span>
+              {concentrations.map((c, i) => (
+                <span key={i} className="flex items-center gap-1.5">
+                  <span className="rounded-sm border border-border bg-background px-1.5 py-0.5 text-foreground">
+                    {c.toFixed(2)} ppm
+                  </span>
+                  {i < ratios.length && <span className="text-muted-foreground">x {ratios[i].toFixed(1)}</span>}
+                </span>
+              ))}
+            </div>
           </CardContent>
         </Card>
       )}
 
       {chainComplete && concentrations && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Concentration up the chain</CardTitle>
+        <Card className="gap-3 py-5">
+          <CardHeader className="gap-1 px-5">
+            <CardTitle className="text-base">Concentration up the chain</CardTitle>
+            <CardDescription>
+              Each bar is the jar to its left multiplied by the transfer ratio you set above. Hover a bar to read its
+              exact value.
+            </CardDescription>
           </CardHeader>
-          <CardContent className="pb-6">
+          <CardContent className="bg-grid-faint px-5 pb-5">
             <div className="h-64 w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={chartData} margin={{ left: 0, right: 16, top: 8, bottom: 0 }}>
@@ -195,7 +222,17 @@ export function BiomagnificationLab({ simState, onSimStateChange, readOnly }: La
                 </BarChart>
               </ResponsiveContainer>
             </div>
-            <Table className="mt-4">
+          </CardContent>
+        </Card>
+      )}
+
+      {chainComplete && gradingView && chartData.length > 0 && (
+        <Card className="gap-3 py-5">
+          <CardHeader className="gap-1 px-5">
+            <CardTitle className="text-base">Exact readings</CardTitle>
+          </CardHeader>
+          <CardContent className="px-5 pb-5">
+            <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Trophic level</TableHead>

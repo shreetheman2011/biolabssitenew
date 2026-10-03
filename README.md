@@ -11,7 +11,7 @@ Built with Next.js (App Router), Supabase (Postgres + Auth), and Brevo for email
 1. Go to [supabase.com](https://supabase.com), create a new project, and wait for it to finish provisioning.
 2. **Disable email confirmation** (this app does not do email verification): in the dashboard go to
    **Authentication → Sign In / Providers → Email**, and turn off **Confirm email**.
-3. Run the migrations in `supabase/migrations/`, in order (`0001` through `0012`). Easiest way:
+3. Run the migrations in `supabase/migrations/`, in order (`0001` through `0016`). Easiest way:
    open the **SQL Editor** in the dashboard and paste in each file's contents one at a time, in
    numeric order, running each before moving to the next. (If you have the Supabase CLI linked to
    this project instead, `supabase db push` applies all of them at once.)

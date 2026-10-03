@@ -28,12 +28,12 @@ export function OrganismCard({ organism, disabled }: { organism: Organism; disab
       {...listeners}
       disabled={disabled}
       className={cn(
-        "flex items-center gap-2 rounded-lg border bg-card px-3 py-2 text-sm",
-        !disabled && "cursor-grab touch-none",
+        "flex items-center gap-1.5 rounded-sm border border-dashed border-border bg-muted/40 px-2.5 py-1.5 font-mono text-xs",
+        !disabled && "cursor-grab touch-none hover:border-foreground/40",
         isDragging && "opacity-70 shadow-lg"
       )}
     >
-      <Icon className="text-primary size-4" />
+      <Icon className="text-muted-foreground size-3.5" />
       {organism.label}
     </button>
   );

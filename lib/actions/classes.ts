@@ -43,6 +43,7 @@ export async function joinClassByCode(code: string): Promise<ClassActionResult> 
   const { data, error } = await supabase.rpc("join_class_by_code", { p_join_code: code });
 
   if (error) {
+    console.error("join_class_by_code rpc error:", JSON.stringify(error, null, 2));
     const message = error.message.includes("invalid_code")
       ? "That join code doesn't match any class."
       : error.message.includes("class_archived")
@@ -55,6 +56,7 @@ export async function joinClassByCode(code: string): Promise<ClassActionResult> 
 
   const row = data?.[0];
   if (!row) {
+    console.error("join_class_by_code returned no row. data was:", JSON.stringify(data));
     return { error: "Something went wrong joining the class. Try again." };
   }
 

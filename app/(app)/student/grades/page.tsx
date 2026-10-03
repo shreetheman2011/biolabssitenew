@@ -10,11 +10,21 @@ export default async function StudentGradesPage() {
 
   const { data: grades } = await supabase
     .from("grades")
-    .select("id, assignment_id, numeric_score, rubric_scores, feedback, graded_at")
+    .select("id, submission_id, numeric_score, rubric_scores, feedback, graded_at")
     .eq("student_id", studentId)
     .order("graded_at", { ascending: false });
 
-  const assignmentIds = (grades ?? []).map((g) => g.assignment_id);
+  const submissionIds = (grades ?? []).map((g) => g.submission_id);
+
+  const { data: submissions } = submissionIds.length
+    ? await supabase.from("submissions").select("id, assignment_id, attempt_number").in("id", submissionIds)
+    : { data: [] };
+
+  const submissionById = new Map((submissions ?? []).map((s) => [s.id, s]));
+
+  const assignmentIds = Array.from(
+    new Set((submissions ?? []).map((s) => s.assignment_id))
+  );
 
   const { data: assignments } = assignmentIds.length
     ? await supabase
@@ -52,7 +62,8 @@ export default async function StudentGradesPage() {
       ) : (
         <div className="flex flex-col gap-3">
           {grades.map((g) => {
-            const assignment = assignmentById.get(g.assignment_id);
+            const submission = submissionById.get(g.submission_id);
+            const assignment = submission ? assignmentById.get(submission.assignment_id) : undefined;
             if (!assignment) return null;
             const slug = labSlugById.get(assignment.lab_template_id);
             const Icon = slug ? LAB_ICONS[slug] : null;
@@ -79,7 +90,8 @@ export default async function StudentGradesPage() {
                       <div>
                         <p className="font-medium">{assignment.title}</p>
                         <p className="text-muted-foreground text-xs">
-                          {classNameById.get(assignment.class_id)}, graded{" "}
+                          {classNameById.get(assignment.class_id)}
+                          {submission && `, attempt ${submission.attempt_number}`}, graded{" "}
                           {new Date(g.graded_at).toLocaleDateString()}
                         </p>
                       </div>

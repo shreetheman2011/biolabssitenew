@@ -25,19 +25,46 @@ import {
   type AssignmentFormInput,
   type AssignmentFormOutput,
 } from "@/lib/validation/assignments";
-import { createAssignment } from "@/lib/actions/assignments";
+import { createAssignment, updateAssignment } from "@/lib/actions/assignments";
 import { LAB_ICONS } from "@/lib/labs/icons";
 import type { AssignmentStatus } from "@/lib/supabase/types";
 import type { Database } from "@/lib/supabase/types";
 
 type LabTemplateRow = Database["public"]["Tables"]["lab_templates"]["Row"];
+type AssignmentRow = Database["public"]["Tables"]["assignments"]["Row"];
+
+function toDatetimeLocalValue(iso: string) {
+  const d = new Date(iso);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function defaultsFromAssignment(assignment: AssignmentRow): AssignmentFormInput {
+  return {
+    labTemplateId: assignment.lab_template_id,
+    title: assignment.title,
+    instructions: assignment.instructions ?? "",
+    dueAt: assignment.due_at ? toDatetimeLocalValue(assignment.due_at) : "",
+    allowMultipleAttempts: assignment.allow_multiple_attempts,
+    maxAttempts: assignment.max_attempts != null ? String(assignment.max_attempts) : "",
+    gradingType: assignment.grading_type,
+    maxScore: assignment.max_score != null ? String(assignment.max_score) : "",
+    rubricCriteria:
+      assignment.rubric_criteria?.map((c) => ({
+        label: c.label,
+        maxPoints: String(c.max_points),
+      })) ?? [],
+  };
+}
 
 export function AssignmentForm({
   classId,
   labTemplates,
+  assignment,
 }: {
   classId: string;
   labTemplates: LabTemplateRow[];
+  assignment?: AssignmentRow;
 }) {
   const [isPending, startTransition] = useTransition();
   const [pendingStatus, setPendingStatus] = useState<AssignmentStatus | null>(null);
@@ -45,17 +72,19 @@ export function AssignmentForm({
 
   const form = useForm<AssignmentFormInput, undefined, AssignmentFormOutput>({
     resolver: zodResolver(assignmentFormSchema),
-    defaultValues: {
-      labTemplateId: "",
-      title: "",
-      instructions: "",
-      dueAt: "",
-      allowMultipleAttempts: false,
-      maxAttempts: "",
-      gradingType: "numeric",
-      maxScore: "",
-      rubricCriteria: [],
-    },
+    defaultValues: assignment
+      ? defaultsFromAssignment(assignment)
+      : {
+          labTemplateId: "",
+          title: "",
+          instructions: "",
+          dueAt: "",
+          allowMultipleAttempts: false,
+          maxAttempts: "",
+          gradingType: "numeric",
+          maxScore: "",
+          rubricCriteria: [],
+        },
   });
 
   const { fields, append, remove } = useFieldArray({
@@ -76,7 +105,9 @@ export function AssignmentForm({
       setFormError(null);
       setPendingStatus(status);
       startTransition(async () => {
-        const result = await createAssignment(classId, data, status);
+        const result = assignment
+          ? await updateAssignment(assignment.id, classId, data, status)
+          : await createAssignment(classId, data, status);
         if (result?.error) {
           setFormError(result.error);
           setPendingStatus(null);
@@ -114,12 +145,7 @@ export function AssignmentForm({
                           selected && "border-primary bg-primary/5"
                         )}
                       >
-                        <div className="flex items-center justify-between">
-                          <Icon className="text-primary size-5" />
-                          <span className="text-muted-foreground text-xs">
-                            {lab.estimated_minutes} min
-                          </span>
-                        </div>
+                        <Icon className="text-primary size-5" />
                         <p className="font-display text-sm font-medium">{lab.title}</p>
                         <p className="text-muted-foreground text-xs">{lab.summary}</p>
                       </button>
@@ -325,14 +351,23 @@ export function AssignmentForm({
         {formError && <p className="text-destructive text-sm">{formError}</p>}
 
         <div className="flex gap-3">
-          <Button type="button" variant="outline" disabled={isPending} onClick={() => submitAs("draft")}>
-            {isPending && pendingStatus === "draft" && <Loader2 className="animate-spin" />}
-            Save as draft
-          </Button>
-          <Button type="button" disabled={isPending} onClick={() => submitAs("posted")}>
-            {isPending && pendingStatus === "posted" && <Loader2 className="animate-spin" />}
-            Post to class
-          </Button>
+          {assignment?.status === "posted" ? (
+            <Button type="button" disabled={isPending} onClick={() => submitAs("posted")}>
+              {isPending && <Loader2 className="animate-spin" />}
+              Save changes
+            </Button>
+          ) : (
+            <>
+              <Button type="button" variant="outline" disabled={isPending} onClick={() => submitAs("draft")}>
+                {isPending && pendingStatus === "draft" && <Loader2 className="animate-spin" />}
+                Save as draft
+              </Button>
+              <Button type="button" disabled={isPending} onClick={() => submitAs("posted")}>
+                {isPending && pendingStatus === "posted" && <Loader2 className="animate-spin" />}
+                Post to class
+              </Button>
+            </>
+          )}
         </div>
       </form>
     </Form>

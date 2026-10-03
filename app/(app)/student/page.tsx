@@ -79,14 +79,7 @@ export default async function StudentHomePage() {
         .in("assignment_id", assignmentIds)
     : { data: [] };
 
-  const { data: grades } = assignmentIds.length
-    ? await supabase.from("grades").select("assignment_id").eq("student_id", studentId).in("assignment_id", assignmentIds)
-    : { data: [] };
-
-  const gradedAssignmentIds = new Set((grades ?? []).map((g) => g.assignment_id));
-
   const upcoming = (assignments ?? [])
-    .filter((a) => !gradedAssignmentIds.has(a.id))
     .map((a) => {
       const subs = (submissions ?? []).filter((s) => s.assignment_id === a.id);
       const { inProgress, submittedCount } = summarizeAttempts(subs);
@@ -100,6 +93,7 @@ export default async function StudentHomePage() {
       const klass = classById.get(a.class_id);
       return { assignment: a, inProgress, submittedCount, canStart, lab, klass };
     })
+    .filter(({ inProgress, canStart }) => inProgress || canStart)
     .sort((a, b) => {
       if (!a.assignment.due_at && !b.assignment.due_at) return 0;
       if (!a.assignment.due_at) return 1;
@@ -112,7 +106,7 @@ export default async function StudentHomePage() {
       <div>
         <h1 className="font-display text-2xl font-medium">Upcoming labs</h1>
         <p className="text-muted-foreground mt-1 text-sm">
-          Everything posted and not yet graded, across all your classes.
+          Everything posted that you can start, resume, or try again, across all your classes.
         </p>
       </div>
 
@@ -120,7 +114,7 @@ export default async function StudentHomePage() {
         <Card>
           <CardHeader>
             <CardTitle>All caught up</CardTitle>
-            <CardDescription>Nothing posted and ungraded right now, check back later.</CardDescription>
+            <CardDescription>Nothing left to start or resume right now, check back later.</CardDescription>
           </CardHeader>
           <CardContent />
         </Card>

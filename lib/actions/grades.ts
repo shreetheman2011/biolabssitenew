@@ -29,11 +29,14 @@ export async function saveGrade(input: {
       rubric_scores: input.rubricScores,
       feedback: input.feedback,
     },
-    { onConflict: "assignment_id,student_id" }
+    { onConflict: "submission_id" }
   );
 
   if (error) return { error: "Could not save the grade. Try again." };
 
   revalidatePath(`/teacher/classes/${input.classId}/assignments/${input.assignmentId}/gradebook`);
+  revalidatePath(`/student/classes/${input.classId}`);
+  revalidatePath("/student/grades");
+  revalidatePath("/student");
   return { success: true };
 }

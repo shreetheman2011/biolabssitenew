@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, ArrowRight, ChevronLeft } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LedgerTag } from "@/components/ui/ledger-tag";
 import { JournalPromptRenderer } from "@/components/labs/journal-prompt-renderer";
 import { LAB_REGISTRY } from "@/lib/labs/registry";
@@ -47,14 +48,19 @@ export default async function StudentGradingPage({
     .eq("student_id", studentId)
     .order("attempt_number", { ascending: false });
 
-  const gradableSubmission = (submissions ?? []).find((s) => s.status === "submitted") ?? null;
+  const gradableSubmissions = (submissions ?? []).filter((s) => s.status === "submitted");
 
-  const { data: existingGrade } = await supabase
-    .from("grades")
-    .select("numeric_score, rubric_scores, feedback")
-    .eq("assignment_id", assignmentId)
-    .eq("student_id", studentId)
-    .maybeSingle();
+  const { data: grades } = gradableSubmissions.length
+    ? await supabase
+        .from("grades")
+        .select("submission_id, numeric_score, rubric_scores, feedback")
+        .in(
+          "submission_id",
+          gradableSubmissions.map((s) => s.id)
+        )
+    : { data: [] };
+
+  const gradeBySubmissionId = new Map((grades ?? []).map((g) => [g.submission_id, g]));
 
   const { data: roster } = await supabase
     .from("gradebook_entries")
@@ -111,7 +117,7 @@ export default async function StudentGradingPage({
         </div>
       </div>
 
-      {!gradableSubmission ? (
+      {gradableSubmissions.length === 0 ? (
         <Card>
           <CardContent className="py-10 text-center">
             <p className="text-muted-foreground text-sm">
@@ -122,48 +128,61 @@ export default async function StudentGradingPage({
           </CardContent>
         </Card>
       ) : (
-        <>
-          <div className="flex items-center gap-2">
-            <LedgerTag>Attempt {gradableSubmission.attempt_number}</LedgerTag>
-            {gradableSubmission.submitted_at && (
-              <span className="text-muted-foreground text-xs">
-                Submitted {new Date(gradableSubmission.submitted_at).toLocaleString()}
-              </span>
-            )}
-          </div>
+        <Tabs defaultValue={String(gradableSubmissions[0].attempt_number)}>
+          {gradableSubmissions.length > 1 && (
+            <TabsList>
+              {gradableSubmissions.map((s) => (
+                <TabsTrigger key={s.id} value={String(s.attempt_number)}>
+                  Attempt {s.attempt_number}
+                  {gradeBySubmissionId.has(s.id) && " · Graded"}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          )}
+          {gradableSubmissions.map((submission) => (
+            <TabsContent
+              key={submission.id}
+              value={String(submission.attempt_number)}
+              className="flex flex-col gap-6"
+            >
+              <div className="flex items-center gap-2">
+                <LedgerTag>Attempt {submission.attempt_number}</LedgerTag>
+                {submission.submitted_at && (
+                  <span className="text-muted-foreground text-xs">
+                    Submitted {new Date(submission.submitted_at).toLocaleString()}
+                  </span>
+                )}
+              </div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Lab replay</CardTitle>
-              <CardDescription>Exactly what the student left behind when they submitted.</CardDescription>
-            </CardHeader>
-            <CardContent className="pb-6">
-              <LabComponent
-                simState={gradableSubmission.sim_state}
-                onSimStateChange={() => {}}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Lab replay</CardTitle>
+                  <CardDescription>Exactly what the student left behind when they submitted.</CardDescription>
+                </CardHeader>
+                <CardContent className="pb-6">
+                  <LabComponent simState={submission.sim_state} readOnly gradingView />
+                </CardContent>
+              </Card>
+
+              <JournalPromptRenderer
+                schema={labTemplate.default_journal_schema}
+                responses={submission.journal_responses}
                 readOnly
               />
-            </CardContent>
-          </Card>
 
-          <JournalPromptRenderer
-            schema={labTemplate.default_journal_schema}
-            responses={gradableSubmission.journal_responses}
-            onChange={() => {}}
-            readOnly
-          />
-
-          <GradingForm
-            assignmentId={assignmentId}
-            classId={classId}
-            studentId={studentId}
-            submissionId={gradableSubmission.id}
-            gradingType={assignment.grading_type}
-            maxScore={assignment.max_score}
-            rubricCriteria={assignment.rubric_criteria ?? []}
-            existingGrade={existingGrade ?? null}
-          />
-        </>
+              <GradingForm
+                assignmentId={assignmentId}
+                classId={classId}
+                studentId={studentId}
+                submissionId={submission.id}
+                gradingType={assignment.grading_type}
+                maxScore={assignment.max_score}
+                rubricCriteria={assignment.rubric_criteria ?? []}
+                existingGrade={gradeBySubmissionId.get(submission.id) ?? null}
+              />
+            </TabsContent>
+          ))}
+        </Tabs>
       )}
     </div>
   );

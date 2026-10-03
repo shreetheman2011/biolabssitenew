@@ -15,11 +15,11 @@ export function JournalPromptRenderer({
 }: {
   schema: JournalSchema;
   responses: JournalResponses;
-  onChange: (next: JournalResponses) => void;
+  onChange?: (next: JournalResponses) => void;
   readOnly: boolean;
 }) {
   function setAnswer(promptId: string, value: JournalResponses["answers"][string]) {
-    onChange({ ...responses, answers: { ...responses.answers, [promptId]: value } });
+    onChange?.({ ...responses, answers: { ...responses.answers, [promptId]: value } });
   }
 
   return (
@@ -63,7 +63,7 @@ function PromptField({
 
   if (prompt.type === "short_text") {
     return (
-      <div className="flex flex-col gap-2">
+      <div id={`journal-prompt-${prompt.id}`} className="flex flex-col gap-2">
         {label}
         <Input
           value={(value as string) ?? ""}
@@ -76,7 +76,7 @@ function PromptField({
 
   if (prompt.type === "long_text") {
     return (
-      <div className="flex flex-col gap-2">
+      <div id={`journal-prompt-${prompt.id}`} className="flex flex-col gap-2">
         {label}
         <Textarea
           rows={4}
@@ -104,7 +104,7 @@ function PromptField({
   }
 
   return (
-    <div className="flex flex-col gap-2">
+    <div id={`journal-prompt-${prompt.id}`} className="flex flex-col gap-2">
       {label}
       <div className="overflow-x-auto rounded-lg border border-border">
         <table className="w-full text-sm">

@@ -9,6 +9,13 @@ export const TROPHIC_LEVEL_LABELS: Record<TrophicLevel, string> = {
   tertiary: "Tertiary consumer",
 };
 
+export const TROPHIC_LEVEL_DESCRIPTIONS: Record<TrophicLevel, string> = {
+  producer: "Makes its own food from sunlight. It absorbs whatever pollutant is in the water or soil around it at a low, dilute concentration.",
+  primary: "Eats producers directly. Because it eats a large volume of plant or algae matter over its lifetime, the pollutant inside all of that food ends up stored in one body.",
+  secondary: "Eats several primary consumers over its lifetime, so it inherits all of the pollutant each of those prey animals had already built up.",
+  tertiary: "An apex predator that eats many secondary consumers. It ends up with the highest pollutant load of all, even though it was never directly exposed to the pollutant's source.",
+};
+
 export type Organism = {
   id: string;
   label: string;

@@ -20,7 +20,6 @@ export const SCENARIOS: Record<Scenario, { nativeLabel: string; invasiveLabel: s
 
 export const NATIVE_START = 300;
 export const NATIVE_GROWTH_RATE = 0.15;
-export const NATIVE_CAP = 500;
 export const COMPETITION_NATIVE_FROM_INVASIVE = 1.3;
 export const COMPETITION_INVASIVE_FROM_NATIVE = 0.4;
 export const MAX_YEARS = 25;
@@ -73,16 +72,17 @@ export function stepYear(
 ): { native: number; invasive: number } {
   const effectiveInvasiveGrowth =
     params.invasiveGrowthRate * (1 - params.predationPressure) * modifiers.growthMultiplier;
-  const effectiveCap = Math.max(50, params.resourceCap * modifiers.capMultiplier);
+  const sharedCap = Math.max(50, params.resourceCap);
+  const effectiveInvasiveCap = Math.max(50, params.resourceCap * modifiers.capMultiplier);
 
   const nextNative =
     native +
-    NATIVE_GROWTH_RATE * native * (1 - (native + COMPETITION_NATIVE_FROM_INVASIVE * invasive) / NATIVE_CAP);
+    NATIVE_GROWTH_RATE * native * (1 - (native + COMPETITION_NATIVE_FROM_INVASIVE * invasive) / sharedCap);
   const nextInvasive =
     invasive +
     effectiveInvasiveGrowth *
       invasive *
-      (1 - (invasive + COMPETITION_INVASIVE_FROM_NATIVE * native) / effectiveCap);
+      (1 - (invasive + COMPETITION_INVASIVE_FROM_NATIVE * native) / effectiveInvasiveCap);
 
   return {
     native: Math.max(0, Math.round(nextNative)),
